@@ -1,6 +1,7 @@
 # Home Assistant Assist Retry
 
-Home Assistant doesn't have a built-in retry functionality for Assist entities, so something like a temporal Gemini/LLM error results in requests failing. This allows you create a new conversation agent that wraps another conversational LLM agent (e.g. Gemini, OpenAI, etc) with retry logic, so things retry instead of erroring out. Each retry logs a warning, so you can see how often it happens. There's no latency impact, unless a retry is necessary:
+Home Assistant doesn't have a built-in retry functionality for Assist entities, so something like a temporary LLM error results in requests failing. This allows you to create a new conversation agent that wraps another conversational LLM agent (e.g. Gemini, OpenAI, etc) with retry logic, so things retry instead of erroring out. Each retry logs a warning, so you can see how often it happens. There's no latency impact, unless a retry is necessary:
+
 <img width="517" height="404" alt="image" src="https://github.com/user-attachments/assets/c884902b-e15c-4d47-9768-4af685d6976f" />
 
 
