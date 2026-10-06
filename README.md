@@ -1,40 +1,8 @@
-# Assist Retry
+# Home Assistant Assist Retry
 
-A Home Assistant conversation agent that passes each request to another agent, and asks it again
-when it fails before saying anything. Put it in front of a cloud LLM agent (Google Gemini, OpenAI,
-Anthropic, Ollama and so on) so that an occasional API error or malformed reply doesn't end in
-your voice satellite's error tone.
+Home Assistant doesn't have a built-in retry functionality for Assist entities, so something like a temporal Gemini/LLM error results in requests failing. This allows you create a new conversation agent that wraps another conversational LLM agent (e.g. Gemini, OpenAI, etc) with retry logic, so things retry instead of erroring out. Each retry logs a warning, so you can see how often it happens. There's no latency impact, unless a retry is necessary:
+<img width="517" height="404" alt="image" src="https://github.com/user-attachments/assets/c884902b-e15c-4d47-9768-4af685d6976f" />
 
-## What it retries
-
-An attempt is retried when the wrapped agent raises an error or returns an error response
-**before producing any text**. That covers things like:
-
-- API timeouts and "model overloaded" errors, which Home Assistant would otherwise speak as
-  "Sorry, I had a problem talking to …"
-- malformed replies, such as a model calling a tool when none is configured (Home Assistant
-  fails the request with `No LLM API configured`)
-
-Once the agent has produced text, a failure is passed through as before: that text may already
-be on its way to the speaker, so it can't be taken back.
-
-Each retry logs a warning, so you can see how often it happens.
-
-## How it works
-
-The agent runs the wrapped agent inside the same conversation, so:
-
-- streamed text still reaches the voice pipeline as it arrives, and text-to-speech engines that
-  accept streamed text still start speaking early
-- conversation history and follow-up questions work as usual
-- local commands are unaffected: with "Prefer handling commands locally" on, Home Assistant
-  handles them before any agent is called
-
-In normal use it adds no noticeable delay. A retried request takes as long as the failed attempt
-plus a new answer.
-
-It's meant for LLM agents. Wrapping Home Assistant's own agent only adds a retry to
-"Sorry, I couldn't understand that".
 
 > [!WARNING]
 > This relies on internal parts of Home Assistant's conversation component (how the active
