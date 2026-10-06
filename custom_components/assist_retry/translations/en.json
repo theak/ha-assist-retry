@@ -1,0 +1,38 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Adds a conversation agent that passes each request to another agent, and retries it when that agent fails before saying anything. Choose the new agent in your voice assistant in place of the original.",
+        "data": {
+          "agent": "Agent to wrap",
+          "retries": "Retries"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "That agent already has a retry wrapper."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "agent": "Agent to wrap",
+          "retries": "Retries"
+        }
+      }
+    }
+  },
+  "services": {
+    "simulate_failure": {
+      "name": "Simulate failure",
+      "description": "Makes the next attempts fail without calling the wrapped agent, to test the retry.",
+      "fields": {
+        "count": {
+          "name": "Count",
+          "description": "How many attempts in a row should fail."
+        }
+      }
+    }
+  }
+}
