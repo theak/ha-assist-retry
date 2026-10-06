@@ -1,0 +1,70 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: integration
+          # Brand images live in the home-assistant/brands repo; this integration has none.
+          ignore: brands
+
+  # The agent relies on internal parts of Home Assistant's conversation component. This weekly
+  # run against the newest Home Assistant release catches them changing before you upgrade.
+  internals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install homeassistant
+      - name: Install the libraries the conversation component needs
+        run: |
+          python - <<'PY' > requirements.txt
+          import json, pathlib, homeassistant.components as comps
+          root = pathlib.Path(comps.__path__[0])
+          todo, seen, reqs = ["conversation"], set(), set()
+          while todo:
+              name = todo.pop()
+              if name in seen or not (root / name / "manifest.json").exists():
+                  continue
+              seen.add(name)
+              m = json.loads((root / name / "manifest.json").read_text())
+              reqs.update(m.get("requirements", []))
+              todo += m.get("dependencies", []) + m.get("after_dependencies", [])
+          print("\n".join(sorted(reqs)))
+          PY
+          cat requirements.txt
+          pip install -r requirements.txt
+      - name: Check the conversation internals the agent uses
+        run: |
+          python - <<'PY'
+          import dataclasses, inspect
+          from homeassistant.components.conversation import (
+              ChatLog, ConversationEntity, async_converse, async_get_chat_log)
+          from homeassistant.components.conversation.chat_log import current_chat_log
+          from homeassistant.helpers.chat_session import async_get_chat_session
+          # The wrapped agent must reuse the chat log the wrapper opened, so its text streams.
+          assert "current_chat_log.get()" in inspect.getsource(async_get_chat_log)
+          # The wrapper watches deltas through this listener to know whether speech started.
+          assert "delta_listener" in {f.name for f in dataclasses.fields(ChatLog)}
+          assert "self.delta_listener(" in inspect.getsource(ChatLog.async_add_delta_content_stream)
+          assert {"agent_id", "conversation_id", "device_id", "satellite_id", "extra_system_prompt"} <= set(
+              inspect.signature(async_converse).parameters)
+          assert hasattr(ConversationEntity, "_attr_supports_streaming")
+          import homeassistant.const as c; print("OK on Home Assistant", c.__version__)
+          PY
